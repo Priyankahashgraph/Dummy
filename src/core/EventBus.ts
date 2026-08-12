@@ -10,4 +10,6 @@ export const GameEvents = {
   BobDied: "bob-died",
   BobWon: "bob-won",
   RetryRequested: "retry-requested",
+  NextLevelRequested: "next-level-requested",
+  LevelSelectRequested: "level-select-requested",
 } as const;

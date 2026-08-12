@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { TEXTURES } from "../core/Constants";
 import { Save } from "../core/SaveManager";
-import { level1 } from "../levels/level1";
+import { LEVELS } from "../levels/registry";
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -32,10 +32,9 @@ export class MenuScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    const record = Save.getLevel(level1.id);
-    const best = record.bestTimeMs !== null ? `${(record.bestTimeMs / 1000).toFixed(1)}s` : "—";
+    const completedCount = LEVELS.filter((level) => Save.getLevel(level.id).completed).length;
     this.add
-      .text(width / 2, height / 2 - 20, `Best time: ${best}`, {
+      .text(width / 2, height / 2 - 20, `Levels cleared: ${completedCount} / ${LEVELS.length}`, {
         fontFamily: "monospace",
         fontSize: "14px",
         color: "#9aa3b2",
@@ -56,13 +55,12 @@ export class MenuScene extends Phaser.Scene {
 
     button.on("pointerover", () => button.setFillStyle(0x4dd97f));
     button.on("pointerout", () => button.setFillStyle(0x3ec46d));
-    button.on("pointerdown", () => this.startGame());
+    button.on("pointerdown", () => this.goToLevelSelect());
 
-    this.input.keyboard?.once("keydown-SPACE", () => this.startGame());
+    this.input.keyboard?.once("keydown-SPACE", () => this.goToLevelSelect());
   }
 
-  private startGame(): void {
-    this.scene.start("Game");
-    this.scene.launch("UI");
+  private goToLevelSelect(): void {
+    this.scene.start("LevelSelect");
   }
 }

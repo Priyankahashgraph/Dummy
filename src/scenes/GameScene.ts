@@ -1,13 +1,18 @@
 import Phaser from "phaser";
 import { TEXTURES, WALK_SPEED, GRAVITY_Y } from "../core/Constants";
 import { Bob } from "../entities/Bob";
-import { level1, LevelData } from "../levels/level1";
+import { LevelData } from "../levels/types";
+import { LEVELS, getLevelById, getNextLevel } from "../levels/registry";
 import { Analytics } from "../core/Analytics";
 import { Save } from "../core/SaveManager";
 import { GameState } from "../core/GameState";
 import { EventBus, GameEvents } from "../core/EventBus";
 
 const TILE = 64;
+
+export interface GameSceneData {
+  levelId?: string;
+}
 
 export class GameScene extends Phaser.Scene {
   private level!: LevelData;
@@ -26,8 +31,8 @@ export class GameScene extends Phaser.Scene {
     super("Game");
   }
 
-  create(): void {
-    this.level = level1;
+  create(data: GameSceneData): void {
+    this.level = getLevelById(data?.levelId ?? "") ?? LEVELS[0];
     this.finished = false;
     this.bridgeActive = false;
     this.sawPausedUntil = 0;
@@ -60,11 +65,19 @@ export class GameScene extends Phaser.Scene {
     GameState.startRun(this.level.id, now);
     Save.recordAttempt(this.level.id);
     Analytics.track("level_started", { level: this.level.id, attempt: GameState.get().attempt });
-    EventBus.emit(GameEvents.LevelStarted, { levelId: this.level.id, attempt: GameState.get().attempt });
+    EventBus.emit(GameEvents.LevelStarted, {
+      levelId: this.level.id,
+      title: this.level.title,
+      attempt: GameState.get().attempt,
+    });
 
     EventBus.once(GameEvents.RetryRequested, this.handleRetry, this);
+    EventBus.once(GameEvents.NextLevelRequested, this.handleNextLevel, this);
+    EventBus.once(GameEvents.LevelSelectRequested, this.handleLevelSelect, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       EventBus.off(GameEvents.RetryRequested, this.handleRetry, this);
+      EventBus.off(GameEvents.NextLevelRequested, this.handleNextLevel, this);
+      EventBus.off(GameEvents.LevelSelectRequested, this.handleLevelSelect, this);
     });
 
     this.input.keyboard?.on("keydown-R", () => this.handleRetry());
@@ -198,7 +211,12 @@ export class GameScene extends Phaser.Scene {
     if (result === "won") {
       Save.recordCompletion(this.level.id, elapsed);
       Analytics.track("level_completed", { level: this.level.id, timeMs: elapsed });
-      EventBus.emit(GameEvents.BobWon, { levelId: this.level.id, timeMs: elapsed });
+      const nextLevel = getNextLevel(this.level.id);
+      EventBus.emit(GameEvents.BobWon, {
+        levelId: this.level.id,
+        timeMs: elapsed,
+        nextLevelId: nextLevel?.id ?? null,
+      });
     } else {
       Analytics.track("level_failed", { level: this.level.id, timeMs: elapsed });
       EventBus.emit(GameEvents.BobDied, { levelId: this.level.id, timeMs: elapsed });
@@ -206,6 +224,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleRetry(): void {
-    this.scene.restart();
+    this.scene.restart({ levelId: this.level.id });
+  }
+
+  private handleNextLevel(data: { levelId: string }): void {
+    this.scene.start("Game", { levelId: data.levelId });
+  }
+
+  private handleLevelSelect(): void {
+    this.scene.stop("UI");
+    this.scene.start("LevelSelect");
   }
 }

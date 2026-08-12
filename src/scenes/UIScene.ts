@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { EventBus, GameEvents } from "../core/EventBus";
-import { level1 } from "../levels/level1";
+import { GameState } from "../core/GameState";
+import { getLevelById } from "../levels/registry";
 
 const DEATH_LINES = [
   "Bob did not see that coming.",
@@ -9,6 +10,12 @@ const DEATH_LINES = [
   "Bob's insurance does not cover this.",
   "RIP Bob (again).",
 ];
+
+interface PanelButton {
+  label: string;
+  primary: boolean;
+  onClick: () => void;
+}
 
 export class UIScene extends Phaser.Scene {
   private attemptText!: Phaser.GameObjects.Text;
@@ -20,12 +27,13 @@ export class UIScene extends Phaser.Scene {
 
   create(): void {
     this.attemptText = this.add
-      .text(16, 12, `${level1.title} — Attempt 1`, {
+      .text(16, 12, "", {
         fontFamily: "monospace",
         fontSize: "16px",
         color: "#ffffff",
       })
       .setScrollFactor(0);
+    this.syncAttemptTextFromCurrentRun();
 
     this.panel = this.add.container(this.scale.width / 2, this.scale.height / 2);
     this.panel.setScrollFactor(0);
@@ -42,42 +50,93 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
-  private onLevelStarted(data: { attempt: number }): void {
-    this.attemptText.setText(`${level1.title} — Attempt ${data.attempt}`);
+  private syncAttemptTextFromCurrentRun(): void {
+    const state = GameState.get();
+    if (!state.levelId) return;
+    const title = getLevelById(state.levelId)?.title ?? state.levelId;
+    this.setAttemptText(title, state.attempt);
+  }
+
+  private setAttemptText(title: string, attempt: number): void {
+    this.attemptText.setText(`${title} — Attempt ${attempt}`);
+  }
+
+  private onLevelStarted(data: { title: string; attempt: number }): void {
+    this.setAttemptText(data.title, data.attempt);
     this.panel.setVisible(false);
     this.panel.removeAll(true);
   }
 
   private onBobDied(): void {
     const line = Phaser.Utils.Array.GetRandom(DEATH_LINES);
-    this.showPanel("YOU DIED", line, 0xd64550);
+    this.showPanel("YOU DIED", line, 0xd64550, [
+      { label: "RETRY (R)", primary: true, onClick: () => EventBus.emit(GameEvents.RetryRequested) },
+      { label: "LEVEL SELECT", primary: false, onClick: () => EventBus.emit(GameEvents.LevelSelectRequested) },
+    ]);
   }
 
-  private onBobWon(data: { timeMs: number }): void {
+  private onBobWon(data: { timeMs: number; nextLevelId: string | null }): void {
     const seconds = (data.timeMs / 1000).toFixed(1);
-    this.showPanel("LEVEL COMPLETE!", `Bob survived in ${seconds}s`, 0x3ec46d);
+    const buttons: PanelButton[] = [];
+
+    if (data.nextLevelId) {
+      buttons.push({
+        label: "NEXT LEVEL",
+        primary: true,
+        onClick: () => EventBus.emit(GameEvents.NextLevelRequested, { levelId: data.nextLevelId }),
+      });
+      buttons.push({
+        label: "LEVEL SELECT",
+        primary: false,
+        onClick: () => EventBus.emit(GameEvents.LevelSelectRequested),
+      });
+      this.showPanel("LEVEL COMPLETE!", `Bob survived in ${seconds}s`, 0x3ec46d, buttons);
+    } else {
+      buttons.push({
+        label: "LEVEL SELECT",
+        primary: true,
+        onClick: () => EventBus.emit(GameEvents.LevelSelectRequested),
+      });
+      this.showPanel("YOU BEAT ALL LEVELS!", `Bob survived in ${seconds}s`, 0x3ec46d, buttons);
+    }
   }
 
-  private showPanel(title: string, subtitle: string, color: number): void {
+  private showPanel(title: string, subtitle: string, color: number, buttons: PanelButton[]): void {
     this.panel.removeAll(true);
 
-    const bg = this.add.rectangle(0, 0, 360, 180, 0x10121a, 0.9).setStrokeStyle(2, color);
+    const buttonHeight = 44;
+    const buttonGap = 12;
+    const panelHeight = 140 + buttons.length * (buttonHeight + buttonGap);
+
+    const bg = this.add.rectangle(0, 0, 360, panelHeight, 0x10121a, 0.92).setStrokeStyle(2, color);
     const titleText = this.add
-      .text(0, -50, title, { fontFamily: "monospace", fontSize: "28px", color: "#ffffff" })
+      .text(0, -panelHeight / 2 + 36, title, { fontFamily: "monospace", fontSize: "26px", color: "#ffffff" })
       .setOrigin(0.5);
     const subtitleText = this.add
-      .text(0, -10, subtitle, { fontFamily: "monospace", fontSize: "14px", color: "#cccccc" })
+      .text(0, -panelHeight / 2 + 74, subtitle, { fontFamily: "monospace", fontSize: "13px", color: "#cccccc" })
       .setOrigin(0.5);
 
-    const button = this.add
-      .rectangle(0, 50, 160, 44, color, 1)
-      .setInteractive({ useHandCursor: true });
-    const buttonText = this.add
-      .text(0, 50, "RETRY (R)", { fontFamily: "monospace", fontSize: "16px", color: "#10121a" })
-      .setOrigin(0.5);
-    button.on("pointerdown", () => EventBus.emit(GameEvents.RetryRequested));
+    const elements: Phaser.GameObjects.GameObject[] = [bg, titleText, subtitleText];
+    const startY = -panelHeight / 2 + 110;
 
-    this.panel.add([bg, titleText, subtitleText, button, buttonText]);
+    buttons.forEach((btn, i) => {
+      const y = startY + i * (buttonHeight + buttonGap);
+      const fill = btn.primary ? color : 0x2b2f3a;
+      const rect = this.add
+        .rectangle(0, y, 200, buttonHeight, fill, 1)
+        .setInteractive({ useHandCursor: true });
+      const text = this.add
+        .text(0, y, btn.label, {
+          fontFamily: "monospace",
+          fontSize: "15px",
+          color: btn.primary ? "#10121a" : "#ffffff",
+        })
+        .setOrigin(0.5);
+      rect.on("pointerdown", btn.onClick);
+      elements.push(rect, text);
+    });
+
+    this.panel.add(elements);
     this.panel.setVisible(true);
   }
 }

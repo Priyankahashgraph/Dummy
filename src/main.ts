@@ -1,7 +1,9 @@
+/// <reference types="vite/client" />
 import Phaser from "phaser";
 import { GAME_WIDTH, GAME_HEIGHT } from "./core/Constants";
 import { BootScene } from "./scenes/BootScene";
 import { MenuScene } from "./scenes/MenuScene";
+import { LevelSelectScene } from "./scenes/LevelSelectScene";
 import { GameScene } from "./scenes/GameScene";
 import { UIScene } from "./scenes/UIScene";
 import { Analytics } from "./core/Analytics";
@@ -24,8 +26,12 @@ const config: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [BootScene, MenuScene, GameScene, UIScene],
+  scene: [BootScene, MenuScene, LevelSelectScene, GameScene, UIScene],
 };
 
 Analytics.track("app_booted");
-new Phaser.Game(config);
+const game = new Phaser.Game(config);
+
+if (import.meta.env.DEV) {
+  (window as unknown as { __game: Phaser.Game }).__game = game;
+}
