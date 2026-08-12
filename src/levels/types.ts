@@ -4,6 +4,54 @@ export interface GroundSegment {
   y: number; // top surface y
 }
 
+export interface BridgeObstacle {
+  type: "bridge";
+  x: number;
+  width: number;
+  y: number;
+  spikesY: number;
+  leverX: number;
+  leverY: number;
+}
+
+export interface SawObstacle {
+  type: "saw";
+  x: number;
+  highY: number;
+  lowY: number;
+  periodMs: number;
+  pauseMs: number;
+  leverX: number;
+  leverY: number;
+}
+
+export interface CrumbleObstacle {
+  type: "crumble";
+  x: number;
+  y: number;
+  width: number;
+  delayMs: number;
+  spikesY: number;
+}
+
+export interface FanObstacle {
+  type: "fan";
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  liftVelocity: number;
+}
+
+export interface SpringObstacle {
+  type: "spring";
+  x: number;
+  y: number;
+  bounceVelocity: number;
+}
+
+export type Obstacle = BridgeObstacle | SawObstacle | CrumbleObstacle | FanObstacle | SpringObstacle;
+
 export interface LevelData {
   id: string;
   title: string;
@@ -12,16 +60,6 @@ export interface LevelData {
   fallDeathY: number;
   spawn: { x: number; y: number };
   groundSegments: GroundSegment[];
-  pit: { xStart: number; xEnd: number; spikesY: number };
-  bridge: { x: number; y: number; width: number; leverX: number; leverY: number };
-  saw: {
-    x: number;
-    highY: number;
-    lowY: number;
-    periodMs: number;
-    pauseMs: number;
-    leverX: number;
-    leverY: number;
-  };
+  obstacles: Obstacle[];
   flag: { x: number; y: number };
 }

@@ -13,7 +13,9 @@ export const TEXTURES = {
   leverOn: "lever-on",
   bridge: "bridge",
   sawBlade: "saw-blade",
-  shield: "shield",
+  crumble: "crumble",
+  fan: "fan",
+  spring: "spring",
   flag: "flag",
   sky: "sky",
 } as const;

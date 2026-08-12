@@ -18,7 +18,9 @@ export class BootScene extends Phaser.Scene {
     this.makeLever();
     this.makeBridge();
     this.makeSawBlade();
-    this.makeShield();
+    this.makeCrumble();
+    this.makeFan();
+    this.makeSpring();
     this.makeFlag();
     this.makeSky();
 
@@ -138,13 +140,53 @@ export class BootScene extends Phaser.Scene {
     g.destroy();
   }
 
-  private makeShield(): void {
+  private makeCrumble(): void {
     const g = this.make.graphics({ x: 0, y: 0 });
-    g.fillStyle(0x2f6fed, 0.85);
-    g.fillRoundedRect(0, 0, 16, 96, 4);
-    g.lineStyle(2, 0xdfe9ff, 1);
-    g.strokeRoundedRect(0, 0, 16, 96, 4);
-    g.generateTexture(TEXTURES.shield, 16, 96);
+    g.fillStyle(0x8d6a45, 1);
+    g.fillRect(0, 0, 96, 12);
+    g.lineStyle(1, 0x3a2e26, 1);
+    g.beginPath();
+    g.moveTo(18, 0);
+    g.lineTo(26, 12);
+    g.moveTo(48, 0);
+    g.lineTo(40, 12);
+    g.moveTo(72, 0);
+    g.lineTo(80, 12);
+    g.strokePath();
+    g.generateTexture(TEXTURES.crumble, 96, 12);
+    g.destroy();
+  }
+
+  private makeFan(): void {
+    const g = this.make.graphics({ x: 0, y: 0 });
+    g.fillStyle(0x2b2b2b, 1);
+    g.fillRoundedRect(4, 24, 24, 8, 2);
+    g.fillStyle(0x8fd3ff, 1);
+    g.fillCircle(16, 16, 14);
+    g.fillStyle(0x2b2b2b, 1);
+    g.fillCircle(16, 16, 4);
+    for (let i = 0; i < 3; i++) {
+      const angle = (i / 3) * Math.PI * 2;
+      const x = 16 + Math.cos(angle) * 9;
+      const y = 16 + Math.sin(angle) * 9;
+      g.fillCircle(x, y, 3);
+    }
+    g.generateTexture(TEXTURES.fan, 32, 32);
+    g.destroy();
+  }
+
+  private makeSpring(): void {
+    const g = this.make.graphics({ x: 0, y: 0 });
+    g.fillStyle(0x555a6b, 1);
+    g.fillRoundedRect(4, 26, 24, 6, 2);
+    g.lineStyle(3, 0xffb703, 1);
+    g.beginPath();
+    g.moveTo(8, 26);
+    g.lineTo(24, 18);
+    g.lineTo(8, 10);
+    g.lineTo(24, 4);
+    g.strokePath();
+    g.generateTexture(TEXTURES.spring, 32, 32);
     g.destroy();
   }
 
