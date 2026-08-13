@@ -23,6 +23,7 @@ export class BootScene extends Phaser.Scene {
     this.makeSpring();
     this.makeFlag();
     this.makeSky();
+    this.makeParticle();
 
     this.scene.start("Menu");
   }
@@ -197,6 +198,14 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(0x3ec46d, 1);
     g.fillTriangle(10, 4, 10, 34, 46, 19);
     g.generateTexture(TEXTURES.flag, 48, 96);
+    g.destroy();
+  }
+
+  private makeParticle(): void {
+    const g = this.make.graphics({ x: 0, y: 0 });
+    g.fillStyle(0xffffff, 1);
+    g.fillCircle(4, 4, 4);
+    g.generateTexture(TEXTURES.particle, 8, 8);
     g.destroy();
   }
 

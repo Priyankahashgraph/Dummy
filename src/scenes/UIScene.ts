@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { EventBus, GameEvents } from "../core/EventBus";
 import { GameState } from "../core/GameState";
 import { getLevelById } from "../levels/registry";
+import { Sfx } from "../core/Sfx";
 
 const DEATH_LINES = [
   "Bob did not see that coming.",
@@ -20,6 +21,7 @@ interface PanelButton {
 export class UIScene extends Phaser.Scene {
   private attemptText!: Phaser.GameObjects.Text;
   private panel!: Phaser.GameObjects.Container;
+  private muteButton!: Phaser.GameObjects.Text;
 
   constructor() {
     super("UI");
@@ -34,6 +36,16 @@ export class UIScene extends Phaser.Scene {
       })
       .setScrollFactor(0);
     this.syncAttemptTextFromCurrentRun();
+
+    this.muteButton = this.add
+      .text(this.scale.width - 16, 12, Sfx.isMuted() ? "\u{1F507}" : "\u{1F50A}", { fontSize: "20px" })
+      .setOrigin(1, 0)
+      .setScrollFactor(0)
+      .setInteractive({ useHandCursor: true });
+    this.muteButton.on("pointerdown", () => {
+      const muted = Sfx.toggleMuted();
+      this.muteButton.setText(muted ? "\u{1F507}" : "\u{1F50A}");
+    });
 
     this.panel = this.add.container(this.scale.width / 2, this.scale.height / 2);
     this.panel.setScrollFactor(0);

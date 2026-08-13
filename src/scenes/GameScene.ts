@@ -7,6 +7,7 @@ import { Analytics } from "../core/Analytics";
 import { Save } from "../core/SaveManager";
 import { GameState } from "../core/GameState";
 import { EventBus, GameEvents } from "../core/EventBus";
+import { Sfx } from "../core/Sfx";
 
 const TILE = 64;
 
@@ -38,6 +39,7 @@ interface CrumbleInstance {
 interface FanInstance {
   spec: FanObstacle;
   zone: Phaser.GameObjects.Zone;
+  lastSfxAt: number;
 }
 
 interface SpringInstance {
@@ -59,6 +61,14 @@ export class GameScene extends Phaser.Scene {
   private fans: FanInstance[] = [];
   private springs: SpringInstance[] = [];
 
+  private dustEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private debrisEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private sparkEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private confettiEmitterA!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private confettiEmitterB!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private wasAirborne = false;
+  private nextFootstepAt = 0;
+
   constructor() {
     super("Game");
   }
@@ -71,6 +81,10 @@ export class GameScene extends Phaser.Scene {
     this.crumbles = [];
     this.fans = [];
     this.springs = [];
+    this.wasAirborne = false;
+    this.nextFootstepAt = 0;
+
+    this.buildParticles();
 
     this.physics.world.gravity.y = GRAVITY_Y;
     this.physics.world.setBounds(0, 0, this.level.worldWidth, this.level.worldHeight);
@@ -135,13 +149,83 @@ export class GameScene extends Phaser.Scene {
     if (this.finished) return;
 
     if (!this.bob.isDead) {
-      (this.bob.body as Phaser.Physics.Arcade.Body).setVelocityX(WALK_SPEED);
+      const body = this.bob.body as Phaser.Physics.Arcade.Body;
+      body.setVelocityX(WALK_SPEED);
+
+      const grounded = body.blocked.down || body.touching.down;
+      if (!grounded) {
+        this.wasAirborne = true;
+      } else if (this.wasAirborne) {
+        this.wasAirborne = false;
+        this.bob.squash();
+        this.dustEmitter.emitParticleAt(this.bob.x, this.bob.y, 6);
+      } else if (time >= this.nextFootstepAt) {
+        this.nextFootstepAt = time + 180;
+        this.dustEmitter.emitParticleAt(this.bob.x, this.bob.y, 1);
+      }
+
       if (this.bob.y > this.level.fallDeathY) {
         this.onFallDeath();
       }
     }
 
     this.updateSaws(time);
+  }
+
+  private buildParticles(): void {
+    this.dustEmitter = this.add.particles(0, 0, TEXTURES.particle, {
+      speed: { min: 20, max: 70 },
+      angle: { min: 200, max: 340 },
+      scale: { start: 0.5, end: 0 },
+      alpha: { start: 0.5, end: 0 },
+      lifespan: 280,
+      tint: 0x8d6a45,
+      quantity: 0,
+      frequency: -1,
+    });
+    this.debrisEmitter = this.add.particles(0, 0, TEXTURES.particle, {
+      speed: { min: 80, max: 220 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 0.8, end: 0 },
+      alpha: { start: 1, end: 0 },
+      lifespan: 500,
+      gravityY: 500,
+      tint: [0xffd166, 0x2f6fed, 0xe07a5f],
+      quantity: 0,
+      frequency: -1,
+    });
+    this.sparkEmitter = this.add.particles(0, 0, TEXTURES.particle, {
+      speed: { min: 40, max: 120 },
+      angle: { min: 250, max: 290 },
+      scale: { start: 0.6, end: 0 },
+      alpha: { start: 1, end: 0 },
+      lifespan: 350,
+      tint: 0xffe27a,
+      quantity: 0,
+      frequency: -1,
+    });
+    this.confettiEmitterA = this.add.particles(0, 0, TEXTURES.particle, {
+      speed: { min: 100, max: 260 },
+      angle: { min: 240, max: 300 },
+      scale: { start: 0.7, end: 0.2 },
+      alpha: { start: 1, end: 0 },
+      lifespan: 900,
+      gravityY: 300,
+      tint: 0x3ec46d,
+      quantity: 0,
+      frequency: -1,
+    });
+    this.confettiEmitterB = this.add.particles(0, 0, TEXTURES.particle, {
+      speed: { min: 100, max: 260 },
+      angle: { min: 240, max: 300 },
+      scale: { start: 0.7, end: 0.2 },
+      alpha: { start: 1, end: 0 },
+      lifespan: 900,
+      gravityY: 300,
+      tint: 0xffffff,
+      quantity: 0,
+      frequency: -1,
+    });
   }
 
   private buildGround(): void {
@@ -188,6 +272,9 @@ export class GameScene extends Phaser.Scene {
     instance.lever.setTexture(TEXTURES.leverOn);
     instance.platform.setAlpha(0);
     this.tweens.add({ targets: instance.platform, alpha: 1, duration: 250 });
+    this.sparkEmitter.emitParticleAt(instance.lever.x, instance.lever.y - 30, 8);
+    Sfx.leverClick();
+    Sfx.bridgeExtend();
     Analytics.track("lever_toggled", { lever: "bridge" });
     EventBus.emit(GameEvents.LeverToggled, { lever: "bridge" });
   }
@@ -217,6 +304,9 @@ export class GameScene extends Phaser.Scene {
     if (now < instance.pausedUntil) return;
     instance.pausedUntil = now + instance.spec.pauseMs;
     instance.lever.setTexture(TEXTURES.leverOn);
+    this.sparkEmitter.emitParticleAt(instance.lever.x, instance.lever.y - 30, 8);
+    Sfx.leverClick();
+    Sfx.sawPause();
     Analytics.track("lever_toggled", { lever: "saw" });
     EventBus.emit(GameEvents.LeverToggled, { lever: "saw" });
     this.time.delayedCall(instance.spec.pauseMs, () => instance.lever.setTexture(TEXTURES.lever));
@@ -275,12 +365,17 @@ export class GameScene extends Phaser.Scene {
 
     const zone = this.add.zone(spec.x, spec.y, spec.width, spec.height).setOrigin(0, 0);
     this.physics.add.existing(zone, true);
-    this.fans.push({ spec, zone });
+    this.fans.push({ spec, zone, lastSfxAt: 0 });
   }
 
-  private applyFanLift(spec: FanObstacle): void {
+  private applyFanLift(instance: FanInstance): void {
     const body = this.bob.body as Phaser.Physics.Arcade.Body;
-    body.velocity.y = Phaser.Math.Linear(body.velocity.y, -spec.liftVelocity, 0.3);
+    body.velocity.y = Phaser.Math.Linear(body.velocity.y, -instance.spec.liftVelocity, 0.3);
+
+    if (this.time.now - instance.lastSfxAt > 600) {
+      instance.lastSfxAt = this.time.now;
+      Sfx.fanWhoosh();
+    }
   }
 
   // --- Spring -------------------------------------------------------------
@@ -296,6 +391,8 @@ export class GameScene extends Phaser.Scene {
     const body = this.bob.body as Phaser.Physics.Arcade.Body;
     body.setVelocityY(-instance.spec.bounceVelocity);
     this.tweens.add({ targets: instance.sprite, scaleY: 0.6, duration: 80, yoyo: true });
+    this.sparkEmitter.emitParticleAt(instance.sprite.x, instance.sprite.y - 10, 6);
+    Sfx.springBoing();
   }
 
   // --- Wiring / lifecycle --------------------------------------------------
@@ -314,7 +411,7 @@ export class GameScene extends Phaser.Scene {
       this.physics.add.collider(this.bob, crumble.platform, () => this.handleCrumbleTouch(crumble));
     }
     for (const fan of this.fans) {
-      this.physics.add.overlap(this.bob, fan.zone, () => this.applyFanLift(fan.spec));
+      this.physics.add.overlap(this.bob, fan.zone, () => this.applyFanLift(fan));
     }
     for (const spring of this.springs) {
       this.physics.add.overlap(this.bob, spring.sprite, () => this.triggerSpring(spring));
@@ -324,18 +421,29 @@ export class GameScene extends Phaser.Scene {
   private onHazardHit(): void {
     if (this.bob.isDead || this.finished) return;
     this.bob.die("hazard");
+    this.debrisEmitter.emitParticleAt(this.bob.x, this.bob.y - 20, 14);
+    this.cameras.main.shake(180, 0.015);
+    this.cameras.main.flash(120, 200, 60, 60, false);
+    Sfx.hazardDeath();
     this.finishRun("dead");
   }
 
   private onFallDeath(): void {
     if (this.bob.isDead || this.finished) return;
     this.bob.die("fell");
+    this.debrisEmitter.emitParticleAt(this.bob.x, this.bob.y - 20, 10);
+    this.cameras.main.shake(150, 0.01);
+    Sfx.fallDeath();
     this.finishRun("dead");
   }
 
   private onWin(): void {
     if (this.bob.isDead || this.finished) return;
     this.bob.win();
+    this.confettiEmitterA.emitParticleAt(this.bob.x - 10, this.bob.y - 30, 10);
+    this.confettiEmitterB.emitParticleAt(this.bob.x + 10, this.bob.y - 30, 10);
+    this.cameras.main.flash(200, 255, 255, 255, false);
+    Sfx.win();
     this.finishRun("won");
   }
 

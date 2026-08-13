@@ -18,4 +18,5 @@ export const TEXTURES = {
   spring: "spring",
   flag: "flag",
   sky: "sky",
+  particle: "particle",
 } as const;

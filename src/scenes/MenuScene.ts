@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { TEXTURES } from "../core/Constants";
 import { Save } from "../core/SaveManager";
 import { LEVELS } from "../levels/registry";
+import { Sfx } from "../core/Sfx";
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -61,6 +62,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private goToLevelSelect(): void {
+    Sfx.init();
     this.scene.start("LevelSelect");
   }
 }
