@@ -8,6 +8,7 @@ import { Save } from "../core/SaveManager";
 import { GameState } from "../core/GameState";
 import { EventBus, GameEvents } from "../core/EventBus";
 import { Sfx } from "../core/Sfx";
+import { padHitArea } from "../core/TouchUtils";
 
 const TILE = 64;
 
@@ -254,10 +255,8 @@ export class GameScene extends Phaser.Scene {
 
     this.add.tileSprite(spec.x, spec.spikesY, spec.width, 32, TEXTURES.spikes).setOrigin(0, 0);
 
-    const lever = this.add
-      .sprite(spec.leverX, spec.leverY, TEXTURES.lever)
-      .setOrigin(0.5, 1)
-      .setInteractive({ useHandCursor: true });
+    const lever = this.add.sprite(spec.leverX, spec.leverY, TEXTURES.lever).setOrigin(0.5, 1);
+    padHitArea(lever);
 
     const instance: BridgeInstance = { spec, platform, lever, active: false };
     lever.on("pointerdown", () => this.activateBridge(instance));
@@ -289,10 +288,8 @@ export class GameScene extends Phaser.Scene {
     body.moves = false;
     body.setCircle(18);
 
-    const lever = this.add
-      .sprite(spec.leverX, spec.leverY, TEXTURES.lever)
-      .setOrigin(0.5, 1)
-      .setInteractive({ useHandCursor: true });
+    const lever = this.add.sprite(spec.leverX, spec.leverY, TEXTURES.lever).setOrigin(0.5, 1);
+    padHitArea(lever);
 
     const instance: SawInstance = { spec, sprite, lever, pausedUntil: 0 };
     lever.on("pointerdown", () => this.pauseSaw(instance));

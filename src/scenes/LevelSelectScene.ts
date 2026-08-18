@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { TEXTURES } from "../core/Constants";
 import { Save } from "../core/SaveManager";
 import { LEVELS, isLevelUnlocked } from "../levels/registry";
+import { padHitArea } from "../core/TouchUtils";
 
 const CARD_WIDTH = 180;
 const CARD_HEIGHT = 220;
@@ -26,13 +27,12 @@ export class LevelSelectScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    const backButton = this.add
-      .text(20, 20, "< MENU", {
-        fontFamily: "monospace",
-        fontSize: "14px",
-        color: "#9aa3b2",
-      })
-      .setInteractive({ useHandCursor: true });
+    const backButton = this.add.text(20, 20, "< MENU", {
+      fontFamily: "monospace",
+      fontSize: "14px",
+      color: "#9aa3b2",
+    });
+    padHitArea(backButton, 16, 16);
     backButton.on("pointerdown", () => this.scene.start("Menu"));
     backButton.on("pointerover", () => backButton.setColor("#ffffff"));
     backButton.on("pointerout", () => backButton.setColor("#9aa3b2"));

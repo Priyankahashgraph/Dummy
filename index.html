@@ -12,6 +12,10 @@
         overflow: hidden;
         height: 100%;
         width: 100%;
+        touch-action: none;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
       }
       #app {
         display: flex;
@@ -22,11 +26,50 @@
       }
       canvas {
         image-rendering: pixelated;
+        touch-action: none;
+      }
+      #rotate-prompt {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        background: #10121a;
+        color: #ffffff;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-family: monospace;
+        text-align: center;
+        padding: 24px;
+      }
+      #rotate-prompt .icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+        animation: rotate-hint 1.6s ease-in-out infinite;
+      }
+      @keyframes rotate-hint {
+        0%, 100% { transform: rotate(0deg); }
+        50% { transform: rotate(90deg); }
+      }
+      /* Narrow + portrait viewports (phones held upright) can't fit this
+         landscape platformer usefully, so prompt a rotate instead of
+         rendering a tiny letterboxed sliver. */
+      @media (max-width: 900px) and (orientation: portrait) {
+        #rotate-prompt {
+          display: flex;
+        }
+        #app {
+          display: none;
+        }
       }
     </style>
   </head>
   <body>
     <div id="app"></div>
+    <div id="rotate-prompt">
+      <div class="icon">&#128241;</div>
+      <div>Rotate your device to play</div>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

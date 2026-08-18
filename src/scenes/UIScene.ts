@@ -3,6 +3,7 @@ import { EventBus, GameEvents } from "../core/EventBus";
 import { GameState } from "../core/GameState";
 import { getLevelById } from "../levels/registry";
 import { Sfx } from "../core/Sfx";
+import { padHitArea } from "../core/TouchUtils";
 
 const DEATH_LINES = [
   "Bob did not see that coming.",
@@ -40,8 +41,8 @@ export class UIScene extends Phaser.Scene {
     this.muteButton = this.add
       .text(this.scale.width - 16, 12, Sfx.isMuted() ? "\u{1F507}" : "\u{1F50A}", { fontSize: "20px" })
       .setOrigin(1, 0)
-      .setScrollFactor(0)
-      .setInteractive({ useHandCursor: true });
+      .setScrollFactor(0);
+    padHitArea(this.muteButton, 16, 16);
     this.muteButton.on("pointerdown", () => {
       const muted = Sfx.toggleMuted();
       this.muteButton.setText(muted ? "\u{1F507}" : "\u{1F50A}");
